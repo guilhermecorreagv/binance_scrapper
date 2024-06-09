@@ -5,24 +5,34 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
+
 #include <string>
 #include <iostream>
 #include <cstdlib>
 #include <string>
 #include <filesystem>
+#include <fstream>
+#include <string_view>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
+
+std::filesystem::path getFileName(const std::filesystem::path &fileFolder, std::string_view streamName);
 
 class BinanceScrapper
 {
 public:
-    BinanceScrapper(std::string host, std::string port, std::string endpoint, std::string streamName, std::filesystem::path outfolder);
+    BinanceScrapper(std::string &host, std::string &port, std::string &endpoint,
+                    std::string &streamName, std::filesystem::path outfolder);
     void subscribeStream(std::string streamName);
     void unsubscribeStream(std::string streamName);
     void run();
-    nlohmann::json handleUpdate(std::string raw_response);
+    nlohmann::json handleUpdate(std::string_view raw_response);
     ~BinanceScrapper()
     {
+        unsubscribeStream(streamName);
         ws.close(boost::beast::websocket::close_code::normal);
     }
 
@@ -31,4 +41,7 @@ private:
     boost::asio::ip::tcp::resolver resolver{ioc};
     boost::asio::ssl::context ctx{boost::asio::ssl::context::sslv23_client};
     boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> ws{ioc, ctx};
+    std::string outfileName;
+    std::string streamName;
+    std::ofstream outfile;
 };

@@ -8,7 +8,29 @@ namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 using json = nlohmann::json;
 
-BinanceScrapper::BinanceScrapper(std::string host, std::string port, std::string endpoint, std::string streamName, std::filesystem::path outfolder)
+std::filesystem::path getFileName(const std::filesystem::path &fileFolder, std::string_view streamName)
+{
+    // Get current date
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm buf;
+#ifdef _WIN32
+    localtime_s(&buf, &in_time_t);
+#else
+    localtime_r(&in_time_t, &buf);
+#endif
+
+    // Format date as YYYY-MM-DD
+    std::ostringstream oss;
+    oss << std::put_time(&buf, "%Y-%m-%d") << "-" << streamName << ".csv";
+    std::string filename = oss.str();
+
+    // Combine folder path with filename
+    return fileFolder / filename;
+}
+
+BinanceScrapper::BinanceScrapper(std::string &host, std::string &port, std::string &endpoint,
+                                 std::string &streamName, std::filesystem::path outfolder) : streamName(streamName)
 {
     // Look up the domain name
     auto const results = resolver.resolve(host, port);
@@ -45,6 +67,16 @@ BinanceScrapper::BinanceScrapper(std::string host, std::string port, std::string
     ws.handshake(host, endpoint.c_str());
     std::cout << "Did Websocket handshake!\n";
 
+    // Before subscribing we need to set up the file to be written
+    std::filesystem::path filePath = getFileName(outfolder, streamName);
+
+    std::cout << "Storing data in " << filePath << std::endl;
+
+    outfile.open(filePath, std::ios::app);
+    if (!outfile.is_open())
+    {
+        throw std::ios_base::failure("Failed to open file: " + filePath.string());
+    }
     // Subscribe to the stream
     this->subscribeStream(streamName);
 }
