@@ -30,7 +30,7 @@ std::filesystem::path getFileName(const std::filesystem::path &fileFolder, std::
 }
 
 BinanceScrapper::BinanceScrapper(std::string &host, std::string &port, std::string &endpoint,
-                                 std::string &streamName, std::filesystem::path outfolder) : streamName(streamName)
+                                 std::string &streamName, std::filesystem::path outfolder) : streamName(streamName), resolver(ioc), ctx(ssl::context::sslv23_client), ws(ioc, ctx)
 {
     // Look up the domain name
     auto const results = resolver.resolve(host, port);
@@ -77,15 +77,17 @@ BinanceScrapper::BinanceScrapper(std::string &host, std::string &port, std::stri
     {
         throw std::ios_base::failure("Failed to open file: " + filePath.string());
     }
+
     // Subscribe to the stream
-    this->subscribeStream(streamName);
+    // this->subscribeStream(streamName);
 }
 
 void BinanceScrapper::subscribeStream(std::string streamName)
 {
     std::string request = "{\"method\":\"SUBSCRIBE\",\"params\":[\"" + streamName + "\"],\"id\":1}";
+    std::cout << "Request: " << request << std::endl;
     ws.write(net::buffer(request));
-    std::cout << "Subscribed to" << streamName << "!\n";
+    std::cout << "Subscribed to " << streamName << "!\n";
 }
 
 void BinanceScrapper::unsubscribeStream(std::string streamName)
@@ -93,4 +95,30 @@ void BinanceScrapper::unsubscribeStream(std::string streamName)
     std::string request = "{\"method\":\"UNSUBSCRIBE\",\"params\":[\"" + streamName + "\"],\"id\":312}";
     ws.write(net::buffer(request));
     std::cout << "Unsubscribed to" << streamName << "!\n";
+}
+
+void BinanceScrapper::run()
+{
+    // This buffer will hold the incoming message
+    beast::flat_buffer buffer;
+    beast::error_code ec;
+    while (true)
+    {
+        std::size_t read_bytes = ws.read(buffer, ec);
+        if (ec)
+        {
+            std::cerr << "read: " << ec.message() << "\n";
+            return;
+        }
+        std::cout << "Read " << read_bytes << " bytes!\n";
+        std::string s{beast::buffers_to_string(buffer.data())};
+        json j{s};
+
+        if (read_bytes > 0)
+        {
+            std::cout << beast::make_printable(buffer.data()) << std::endl;
+        }
+
+        buffer.consume(read_bytes);
+    }
 }

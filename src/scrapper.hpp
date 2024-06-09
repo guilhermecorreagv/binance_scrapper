@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
@@ -38,9 +40,9 @@ public:
 
 private:
     boost::asio::io_context ioc;
-    boost::asio::ip::tcp::resolver resolver{ioc};
-    boost::asio::ssl::context ctx{boost::asio::ssl::context::sslv23_client};
-    boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> ws{ioc, ctx};
+    boost::asio::ip::tcp::resolver resolver;
+    boost::asio::ssl::context ctx;
+    boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> ws;
     std::string outfileName;
     std::string streamName;
     std::ofstream outfile;
