@@ -29,7 +29,7 @@ std::filesystem::path getFileName(const std::filesystem::path &fileFolder, std::
     return fileFolder / filename;
 }
 
-BinanceScrapper::BinanceScrapper(std::string &host, std::string &port, std::string &endpoint,
+BinanceScrapper::BinanceScrapper(net::io_context &ioc, std::string &host, std::string &port, std::string &endpoint,
                                  std::string &streamName, std::filesystem::path outfolder) : streamName(streamName), resolver(ioc), ctx(ssl::context::sslv23_client), ws(ioc, ctx)
 {
     // Look up the domain name
@@ -120,5 +120,17 @@ void BinanceScrapper::run()
         }
 
         buffer.consume(read_bytes);
+    }
+}
+
+void BinanceScrapper::handleUpdate(std::string_view response)
+{
+    // @TODO: make this work for any kind of stream (the ones with price level
+    // will be more challenging)
+    json j{response};
+
+    for (auto &[key, val] : j.items())
+    {
+        std::cout << "key: " << key << "\nval: " << val << std::endl;
     }
 }

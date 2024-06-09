@@ -26,12 +26,12 @@ std::filesystem::path getFileName(const std::filesystem::path &fileFolder, std::
 class BinanceScrapper
 {
 public:
-    BinanceScrapper(std::string &host, std::string &port, std::string &endpoint,
-                    std::string &streamName, std::filesystem::path outfolder);
+    explicit BinanceScrapper(boost::asio::io_context &ioc, std::string &host, std::string &port, std::string &endpoint,
+                             std::string &streamName, std::filesystem::path outfolder);
     void subscribeStream(std::string streamName);
     void unsubscribeStream(std::string streamName);
     void run();
-    nlohmann::json handleUpdate(std::string_view raw_response);
+    void handleUpdate(std::string_view response);
     ~BinanceScrapper()
     {
         unsubscribeStream(streamName);
@@ -39,7 +39,6 @@ public:
     }
 
 private:
-    boost::asio::io_context ioc;
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::ssl::context ctx;
     boost::beast::websocket::stream<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> ws;
